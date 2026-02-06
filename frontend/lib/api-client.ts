@@ -73,3 +73,9 @@ export const getAudit = async (auditId: string): Promise<Audit> => {
   const response = await apiClient.get<Audit>(`/audits/${auditId}`);
   return response.data;
 };
+
+/** Base URL for report download (no axios, to allow browser download with auth/cookies if needed) */
+export const getReportDownloadUrl = (auditId: string, format: 'pdf' | 'text'): string => {
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  return `${base}/audits/${auditId}/report?format=${format}`;
+};

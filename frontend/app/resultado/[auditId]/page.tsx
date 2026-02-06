@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { getAudit, type Audit } from '@/lib/api-client';
-import { Loader2, AlertCircle, CheckCircle2, TrendingUp, MessageSquare, Camera, Sparkles } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, TrendingUp, MessageSquare, Camera, Sparkles, Download, FileText } from 'lucide-react';
 import { getScoreColor, getScoreLabel } from '@/lib/utils';
+import { getReportDownloadUrl } from '@/lib/api-client';
 
 export default function ResultadoPage() {
   const params = useParams();
@@ -114,9 +115,29 @@ export default function ResultadoPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
               Resultado da Auditoria
             </h1>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-6">
               Análise completa de como a IA vê seu negócio
             </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              <a
+                href={getReportDownloadUrl(auditId, 'pdf')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-sm transition"
+              >
+                <Download className="w-4 h-4" />
+                Baixar PDF
+              </a>
+              <a
+                href={getReportDownloadUrl(auditId, 'text')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-700 text-white rounded-lg hover:bg-gray-800 font-medium text-sm transition"
+              >
+                <FileText className="w-4 h-4" />
+                Baixar texto
+              </a>
+            </div>
           </div>
 
           <div className="flex flex-col items-center">

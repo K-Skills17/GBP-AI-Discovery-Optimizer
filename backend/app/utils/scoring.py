@@ -21,20 +21,31 @@ def calculate_discovery_score(
     ai_score = ai_confidence * 30
     
     # 2. Data Completeness (0-25 points)
+    total_reviews = business_data.get('total_reviews', 0)
+    rating = business_data.get('rating', 0)
+    try:
+        total_reviews = int(total_reviews) if total_reviews is not None else 0
+    except (TypeError, ValueError):
+        total_reviews = 0
+    try:
+        rating = float(rating) if rating is not None else 0
+    except (TypeError, ValueError):
+        rating = 0
     completeness_factors = {
         'description': 5 if business_data.get('description') else 0,
         'website': 3 if business_data.get('website') else 0,
         'phone': 2 if business_data.get('phone') else 0,
         'claimed': 5 if business_data.get('claimed') else 0,
-        'reviews': min(business_data.get('total_reviews', 0) / 10, 5),
-        'rating': (business_data.get('rating', 0) / 5) * 5
+        'reviews': min(total_reviews / 10, 5),
+        'rating': (rating / 5) * 5
     }
     completeness_score = sum(completeness_factors.values())
     
     # 3. Sentiment Alignment (0-25 points)
     gaps = sentiment_analysis.get('gaps', [])
-    validated_count = len([g for g in gaps if g.get('status') == 'validated'])
-    total_gaps = len(gaps) if gaps else 1
+    gap_dicts = [g for g in gaps if isinstance(g, dict)]
+    validated_count = len([g for g in gap_dicts if g.get('status') == 'validated'])
+    total_gaps = len(gap_dicts) if gap_dicts else 1
     sentiment_score = (validated_count / total_gaps) * 25
     
     # 4. Visual Coverage (0-20 points)
@@ -121,16 +132,18 @@ def generate_priority_recommendations(
     
     # Sentiment gaps
     gaps = sentiment_analysis.get('gaps', [])
-    high_priority_gaps = [g for g in gaps if g.get('status') == 'missing_validation']
+    high_priority_gaps = [g for g in gaps if isinstance(g, dict) and g.get('status') == 'missing_validation']
     if high_priority_gaps:
         gap_example = high_priority_gaps[0]
+        claimed = gap_example.get('claimed') or 'atendimento'
+        claimed_str = str(claimed).lower() if claimed else 'atendimento'
         recommendations.append({
-            "action": f"Solicite avaliações mencionando '{gap_example.get('claimed')}'",
+            "action": f"Solicite avaliações mencionando '{claimed}'",
             "priority": "high",
             "impact": "+8 pontos",
             "effort": "low",
             "category": "review_generation",
-            "template": f"Adoraríamos saber sua opinião sobre nosso {gap_example.get('claimed').lower()}!"
+            "template": f"Adoraríamos saber sua opinião sobre nosso {claimed_str}!",
         })
     
     # Low photo coverage
