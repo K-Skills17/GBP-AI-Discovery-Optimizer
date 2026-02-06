@@ -3,7 +3,7 @@ import logging
 from typing import Dict, Optional
 from datetime import datetime, timedelta
 from app.services.outscraper_service import outscraper_service
-from app.services.gemini_service import gemini_service
+from app.services.openai_service import openai_service
 from app.utils.scoring import (
     calculate_discovery_score,
     get_score_interpretation,
@@ -94,20 +94,20 @@ class AuditService:
             
             # Step 2: AI Perception Analysis
             logger.info("Running AI perception analysis")
-            ai_perception = gemini_service.analyze_business_perception(business, reviews)
+            ai_perception = openai_service.analyze_business_perception(business, reviews)
             
             # Step 3: Sentiment Gap Analysis
             logger.info("Running sentiment analysis")
-            sentiment_analysis = gemini_service.analyze_sentiment_gaps(business, reviews)
+            sentiment_analysis = openai_service.analyze_sentiment_gaps(business, reviews)
             
             # Step 4: Conversational Query Generation
             logger.info("Generating conversational queries")
-            conversational_queries = gemini_service.generate_conversational_queries(business)
+            conversational_queries = openai_service.generate_conversational_queries(business)
             
             # Step 5: Visual Coverage Audit
             logger.info("Analyzing visual coverage")
             photo_urls = business.get('photos') or business.get('raw_data', {}).get('photos_data', []) or []
-            visual_audit = gemini_service.analyze_photo_coverage(business, photo_urls)
+            visual_audit = openai_service.analyze_photo_coverage(business, photo_urls)
             
             # Step 6: Calculate Discovery Score
             discovery_score = calculate_discovery_score(

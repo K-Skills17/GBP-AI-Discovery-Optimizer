@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     # Outscraper
     OUTSCRAPER_API_KEY: str
     
-    # Google Gemini
-    GEMINI_API_KEY: str
-    
+    # OpenAI (for audit analysis)
+    OPENAI_API_KEY: str
+
     # CORS (env var can be comma-separated string, e.g. on Railway)
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 
