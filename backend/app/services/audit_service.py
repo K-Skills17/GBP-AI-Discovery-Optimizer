@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from typing import Dict, Optional
 from datetime import datetime, timedelta
@@ -51,9 +52,13 @@ class AuditService:
             result = self.supabase.table('audits').insert(audit_data).execute()
             audit = result.data[0]
             
-            # Trigger background processing
-            from app.tasks.audit_tasks import process_audit_task
-            process_audit_task.delay(audit['id'])
+            # Trigger background processing (Celery if Redis available, else in-process)
+            try:
+                from app.tasks.audit_tasks import process_audit_task
+                process_audit_task.delay(audit['id'])
+            except Exception as e:
+                logger.warning(f"Celery/Redis unavailable ({e}), running audit in-process")
+                asyncio.create_task(self.process_audit(audit['id']))
             
             return audit
             
