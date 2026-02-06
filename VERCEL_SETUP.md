@@ -1,5 +1,21 @@
 # 🔧 Vercel Setup - Quick Fix Guide
 
+## 🚨 "No Output Directory named 'public' found" – Fix
+
+This error means Vercel is treating the project as a **static site** and looking for a `public` folder. Next.js doesn’t use that.
+
+**Do this:**
+
+1. **Vercel** → your project → **Settings** → **General**
+2. **Root Directory:** set to `frontend` (click Edit, type `frontend`, Save)
+3. **Framework Preset:** set to **Next.js** (not "Other")
+4. **Output Directory:** **clear it** (leave empty). Do not use `public`.
+5. **Save**, then go to **Deployments** → **⋯** on latest → **Redeploy**
+
+After this, the build should succeed.
+
+---
+
 ## ⚠️ Problem: Vercel Detects "Other" Instead of Next.js
 
 **Quick Fix:** Tell Vercel where the frontend is!
@@ -138,7 +154,17 @@ Look for these messages in the deployment logs:
 2. Make sure `frontend/package.json` exists
 3. Redeploy
 
-### Issue 4: Build works locally but fails on Vercel
+### Issue 4: "No Output Directory named 'public' found"
+**Fix:** Vercel is treating the project as a static site. Do this:
+1. Go to **Settings** → **General**
+2. Set **Framework Preset** to **Next.js** (not "Other")
+3. Find **Output Directory** and **clear it** (leave empty) or set to `.next`
+4. Set **Root Directory** to `frontend`
+5. Save and **Redeploy**
+
+Next.js does not use a "public" output folder for deployment—the framework preset must be Next.js.
+
+### Issue 5: Build works locally but fails on Vercel
 **Fix:** Check Node version:
 - Vercel: Settings → General → Node.js Version
 - Should be: 18.x or 20.x
