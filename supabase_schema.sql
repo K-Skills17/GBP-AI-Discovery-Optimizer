@@ -48,6 +48,10 @@ CREATE TABLE IF NOT EXISTS public.businesses (
     claimed BOOLEAN DEFAULT false,
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
+    description TEXT,
+    hours JSONB,
+    photos JSONB,
+    questions_and_answers JSONB,
     raw_data JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -126,6 +130,8 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     published_at TIMESTAMPTZ,
     owner_reply TEXT,
     owner_reply_at TIMESTAMPTZ,
+    likes INTEGER,
+    photos JSONB,
     sentiment_score DECIMAL(3,2),
     extracted_topics JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW()
@@ -222,6 +228,16 @@ ORDER BY a.created_at DESC;
 
 -- You can add seed data here if needed
 -- Example: INSERT INTO public.profiles ...
+
+-- =============================================
+-- MIGRATION: Add columns for full scrape/analysis (run if tables already exist)
+-- =============================================
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
 
 -- =============================================
 -- COMPLETED

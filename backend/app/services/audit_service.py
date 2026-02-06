@@ -106,7 +106,7 @@ class AuditService:
             
             # Step 5: Visual Coverage Audit
             logger.info("Analyzing visual coverage")
-            photo_urls = business.get('raw_data', {}).get('photos', [])
+            photo_urls = business.get('photos') or business.get('raw_data', {}).get('photos_data', []) or []
             visual_audit = gemini_service.analyze_photo_coverage(business, photo_urls)
             
             # Step 6: Calculate Discovery Score

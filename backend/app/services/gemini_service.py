@@ -12,7 +12,7 @@ genai.configure(api_key=settings.GEMINI_API_KEY)
 
 class GeminiService:
     def __init__(self):
-        self.text_model = genai.GenerativeModel('gemini-1.5-flash')
+        self.text_model = genai.GenerativeModel('gemini-2.5-flash')
         
         # Generation config for JSON responses
         self.json_config = {
@@ -121,7 +121,7 @@ O QUE O NEGÓCIO AFIRMA SER BOM:
 {chr(10).join([f"- {claim}" for claim in claimed_strengths])}
 
 AVALIAÇÕES REAIS ({len(review_texts)} total):
-{chr(10).join([f"[{r.get('rating')}★] {r.get('text', '')[:150]}..." for r in reviews[:30]])}
+{chr(10).join([f"[{r.get('rating')}★] {(r.get('text') or '')[:150]}..." for r in reviews[:30]])}
 
 TAREFA: Analise as avaliações e responda em JSON:
 

@@ -91,7 +91,8 @@ class OutscraperService:
             return []
     
     def _normalize_business_data(self, raw_data: Dict) -> Dict:
-        """Normalize Outscraper business data to match Supabase businesses table schema only."""
+        """Normalize Outscraper business data for Supabase businesses table (full scrape data)."""
+        photos = raw_data.get('photos_data', [])[:20] if raw_data.get('photos_data') else []
         return {
             'place_id': raw_data.get('place_id'),
             'name': raw_data.get('name'),
@@ -106,6 +107,10 @@ class OutscraperService:
             'claimed': raw_data.get('owner_title') is not None,
             'latitude': float(raw_data.get('latitude')) if raw_data.get('latitude') else None,
             'longitude': float(raw_data.get('longitude')) if raw_data.get('longitude') else None,
+            'description': raw_data.get('description'),
+            'hours': raw_data.get('working_hours'),
+            'photos': photos,
+            'questions_and_answers': raw_data.get('questions_and_answers', []),
             'raw_data': raw_data,
         }
     
