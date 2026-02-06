@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
-from typing import List
+from typing import List, Union
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "GBP AI Discovery Optimizer"
@@ -22,9 +23,16 @@ class Settings(BaseSettings):
     # Google Gemini
     GEMINI_API_KEY: str
     
-    # CORS
+    # CORS (env var can be comma-separated string, e.g. on Railway)
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
-    
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        return v
+
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
