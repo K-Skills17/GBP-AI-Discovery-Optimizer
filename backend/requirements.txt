@@ -7,9 +7,9 @@ celery==5.3.6
 redis==5.0.1
 google-generativeai==0.3.2
 outscraper==3.0.3
-httpx==0.26.0
+httpx>=0.24,<0.26
 reportlab==4.0.9
-pillow==10.2.0
+pillow>=10.2.0
 matplotlib==3.8.2
 python-dotenv==1.0.0
 python-jose[cryptography]==3.3.0
