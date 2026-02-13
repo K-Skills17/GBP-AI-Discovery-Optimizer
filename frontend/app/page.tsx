@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createAudit } from '@/lib/api-client';
 
@@ -18,6 +18,14 @@ function isValidPhoneBR(value: string): boolean {
 }
 
 export default function Home() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
+  );
+}
+
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
