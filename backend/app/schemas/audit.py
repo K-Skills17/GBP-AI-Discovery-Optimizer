@@ -53,7 +53,7 @@ class CompetitorResponse(BaseModel):
 
 class AuditResponse(BaseModel):
     id: str
-    business_id: str
+    business_id: Optional[str] = None
     status: str
     discovery_score: Optional[int] = None
     competitive_score: Optional[float] = None
@@ -67,7 +67,7 @@ class AuditResponse(BaseModel):
     recommendations: Optional[List[Dict[str, Any]]] = None
     processing_time_seconds: Optional[int] = None
     error_message: Optional[str] = None
-    whatsapp_number: str
+    whatsapp_number: Optional[str] = None
     whatsapp_sent: Optional[bool] = None
     whatsapp_sent_at: Optional[datetime] = None
     whatsapp_error: Optional[str] = None
@@ -75,8 +75,8 @@ class AuditResponse(BaseModel):
     utm_medium: Optional[str] = None
     utm_campaign: Optional[str] = None
     utm_content: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
