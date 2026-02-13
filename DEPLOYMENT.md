@@ -65,7 +65,7 @@ OUTSCRAPER_API_KEY=your_key
 GEMINI_API_KEY=your_key
 CELERY_BROKER_URL=${{Redis.REDIS_URL}}
 CELERY_RESULT_BACKEND=${{Redis.REDIS_URL}}
-BACKEND_CORS_ORIGINS=["https://your-frontend.vercel.app"]
+BACKEND_CORS_ORIGINS=https://your-frontend.vercel.app
 ```
 
 5. **Add Celery Worker Service:**

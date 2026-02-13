@@ -127,7 +127,7 @@ CELERY_BROKER_URL=${{Redis.REDIS_URL}}
 CELERY_RESULT_BACKEND=${{Redis.REDIS_URL}}
 
 # CORS - Add your Vercel URL
-BACKEND_CORS_ORIGINS=["https://gbp-optimizer.vercel.app"]
+BACKEND_CORS_ORIGINS=https://gbp-optimizer.vercel.app
 
 # Limits
 MAX_REVIEWS_PER_AUDIT=100
@@ -441,7 +441,7 @@ npm run build
 
 ### CORS errors
 - Check `BACKEND_CORS_ORIGINS` includes your Vercel URL
-- Format: `["https://your-app.vercel.app"]` (with quotes and brackets)
+- Format: `https://your-app.vercel.app` (plain URL, comma-separated for multiple)
 
 ---
 

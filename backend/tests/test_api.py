@@ -28,7 +28,8 @@ def _make_mock_settings():
     s.VERSION = "2.0.0"
     s.API_PREFIX = "/api/v1"
     s.DEBUG = False
-    s.BACKEND_CORS_ORIGINS = ["http://localhost:3000"]
+    s.BACKEND_CORS_ORIGINS = "http://localhost:3000"
+    s.cors_origins_list = ["http://localhost:3000"]
     s.RATE_LIMIT_PER_MINUTE = 100  # high limit so tests don't get throttled
     s.SENTRY_DSN = ""
     s.SUPABASE_URL = "https://fake.supabase.co"
