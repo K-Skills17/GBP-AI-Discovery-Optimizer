@@ -21,16 +21,15 @@ logger = logging.getLogger(__name__)
 async def create_audit(request_body: AuditCreateRequest, request: Request):
     """Create a new competitive diagnostic audit.
 
-    Accepts an optional `whatsapp` number and `delivery_mode` (standalone | whatsapp).
-    When delivery_mode is "whatsapp" and a number is provided, the report will be
-    sent to WhatsApp via Evolution API after processing completes.
+    WhatsApp number is required — the report is always delivered via WhatsApp
+    (Evolution API) after processing completes.
 
     Steps:
     1. Search business via Google Places API
     2. Find top competitors in same category/area
     3. Run AI analysis (Gemini)
     4. Build competitive report
-    5. (optional) Send to WhatsApp
+    5. Send to WhatsApp
     """
     try:
         # Pull optional user_id from auth middleware
@@ -40,8 +39,11 @@ async def create_audit(request_body: AuditCreateRequest, request: Request):
             business_name=request_body.business_name,
             location=request_body.location,
             whatsapp=request_body.whatsapp,
-            delivery_mode=request_body.delivery_mode,
             user_id=user_id,
+            utm_source=request_body.utm_source,
+            utm_medium=request_body.utm_medium,
+            utm_campaign=request_body.utm_campaign,
+            utm_content=request_body.utm_content,
         )
         return audit
 
@@ -131,6 +133,25 @@ async def send_whatsapp(audit_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Erro ao enviar relatório via WhatsApp.",
         )
+
+
+@router.get(
+    "/audits/{audit_id}/whatsapp-status",
+    summary="Check WhatsApp delivery status",
+)
+async def get_whatsapp_status(audit_id: str):
+    """Check whether the WhatsApp report was successfully delivered."""
+    try:
+        audit = await audit_service.get_audit_status(audit_id)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    return {
+        "whatsapp_sent": audit.get("whatsapp_sent", False),
+        "whatsapp_sent_at": audit.get("whatsapp_sent_at"),
+        "whatsapp_error": audit.get("whatsapp_error"),
+        "whatsapp_number": audit.get("whatsapp_number"),
+    }
 
 
 @router.get(

@@ -1,24 +1,70 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createAudit } from '@/lib/api-client';
+
+function formatPhoneBR(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+function isValidPhoneBR(value: string): boolean {
+  const digits = value.replace(/\D/g, '');
+  // Brazilian mobile: 2-digit DDD (11-99) + 9-digit number starting with 9
+  return digits.length === 11 && digits[2] === '9';
+}
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [businessName, setBusinessName] = useState('');
   const [location, setLocation] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const deliveryMode = whatsapp.trim() ? 'whatsapp' : 'standalone';
+  // Capture UTM params from Facebook ads
+  const [utmParams, setUtmParams] = useState<{
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+  }>({});
+
+  useEffect(() => {
+    setUtmParams({
+      utm_source: searchParams.get('utm_source') || undefined,
+      utm_medium: searchParams.get('utm_medium') || undefined,
+      utm_campaign: searchParams.get('utm_campaign') || undefined,
+      utm_content: searchParams.get('utm_content') || undefined,
+    });
+  }, [searchParams]);
+
+  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setWhatsapp(formatPhoneBR(e.target.value));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!businessName || !location) {
       setError('Por favor, preencha o nome da clínica e a cidade.');
+      return;
+    }
+
+    if (!whatsapp.trim()) {
+      setError('WhatsApp é obrigatório para receber seu diagnóstico.');
+      return;
+    }
+
+    if (!isValidPhoneBR(whatsapp)) {
+      setError(
+        'Número de WhatsApp inválido. Use DDD + número (ex: 11 99999-1234).'
+      );
       return;
     }
 
@@ -29,8 +75,8 @@ export default function Home() {
       const audit = await createAudit({
         business_name: businessName,
         location,
-        whatsapp: whatsapp.trim() || undefined,
-        delivery_mode: deliveryMode,
+        whatsapp: whatsapp.replace(/\D/g, ''),
+        ...utmParams,
       });
       router.push(`/diagnostico/${audit.id}`);
     } catch (err: any) {
@@ -121,25 +167,26 @@ export default function Home() {
                 />
               </div>
 
-              {/* WhatsApp (optional) */}
+              {/* WhatsApp (required) */}
               <div>
                 <label
                   htmlFor="whatsapp"
                   className="block text-sm font-medium text-charcoal mb-1.5"
                 >
-                  WhatsApp{' '}
+                  WhatsApp *{' '}
                   <span className="text-muted-foreground font-normal">
-                    (opcional — receba o relatório direto no celular)
+                    (você receberá o resultado aqui)
                   </span>
                 </label>
                 <input
                   id="whatsapp"
                   type="tel"
                   value={whatsapp}
-                  onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="Ex: 11 99999-1234"
+                  onChange={handleWhatsappChange}
+                  placeholder="(11) 99999-1234"
                   className="w-full px-4 py-3 border border-border rounded-lg bg-cream/50 focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition placeholder:text-muted-foreground/50"
                   disabled={loading}
+                  required
                 />
               </div>
 
@@ -178,13 +225,13 @@ export default function Home() {
                     Iniciando...
                   </>
                 ) : (
-                  'Iniciar Diagnóstico Gratuito'
+                  'Receber Diagnóstico no WhatsApp'
                 )}
               </button>
             </form>
 
             <p className="mt-5 text-xs text-muted-foreground text-center">
-              100% gratuito. Resultado em menos de 1 minuto.
+              100% gratuito. Resultado direto no seu WhatsApp em menos de 1 minuto.
             </p>
           </div>
 
@@ -255,10 +302,10 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="font-serif font-semibold text-charcoal mb-1">
-                Plano de Ação
+                Resultado no WhatsApp
               </h3>
               <p className="text-sm text-muted-foreground">
-                Passos específicos para fechar as lacunas
+                Receba seu diagnóstico direto no celular
               </p>
             </div>
           </div>

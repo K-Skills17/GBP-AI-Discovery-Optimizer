@@ -2,8 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { getAudit, getReportDownloadUrl, type Audit } from '@/lib/api-client';
+import { getAudit, sendWhatsApp, getReportDownloadUrl, type Audit } from '@/lib/api-client';
 import { getScoreColor, getScoreLabel } from '@/lib/utils';
+
+/* ------------------------------------------------------------------ */
+/* Facebook Pixel helper (safe if pixel not loaded)                    */
+/* ------------------------------------------------------------------ */
+
+function fbTrack(event: string, data?: Record<string, unknown>) {
+  if (typeof window !== 'undefined' && typeof (window as any).fbq === 'function') {
+    (window as any).fbq('track', event, data);
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Micro-engagement progress steps                                     */
@@ -15,10 +25,9 @@ const STEPS = [
   { label: 'Analisando presença no Google...', durationMs: 6000 },
   { label: 'Consultando inteligência artificial...', durationMs: 10000 },
   { label: 'Comparando com o Top 3 da sua região...', durationMs: 6000 },
-  { label: 'Gerando seu relatório personalizado...', durationMs: 4000 },
+  { label: 'Enviando resultado para seu WhatsApp...', durationMs: 4000 },
 ];
 
-const TOTAL_DURATION_MS = STEPS.reduce((s, step) => s + step.durationMs, 0);
 const MIN_DISPLAY_MS = 45000; // minimum 45 seconds even if backend is faster
 
 function CheckIcon({ className }: { className?: string }) {
@@ -54,6 +63,10 @@ export default function DiagnosticoPage() {
   const [backendDone, setBackendDone] = useState(false);
   const [progressStarted] = useState(() => Date.now());
 
+  // WhatsApp retry state
+  const [resending, setResending] = useState(false);
+  const [resendResult, setResendResult] = useState<'success' | 'error' | null>(null);
+
   // ---- Poll backend ----
   const pollAudit = useCallback(async () => {
     try {
@@ -61,6 +74,13 @@ export default function DiagnosticoPage() {
       setAudit(data);
       if (data.status === 'completed' || data.status === 'failed') {
         setBackendDone(true);
+        // Fire FB Pixel Lead event on completion
+        if (data.status === 'completed') {
+          fbTrack('Lead', {
+            content_name: 'Diagnostic Audit',
+            content_category: 'audit_completed',
+          });
+        }
       } else {
         setTimeout(pollAudit, 3000);
       }
@@ -100,6 +120,23 @@ export default function DiagnosticoPage() {
 
     return () => clearTimeout(timer);
   }, [backendDone, progressStarted]);
+
+  // ---- WhatsApp resend handler ----
+  const handleResendWhatsApp = async () => {
+    setResending(true);
+    setResendResult(null);
+    try {
+      const result = await sendWhatsApp(auditId);
+      setResendResult(result.success ? 'success' : 'error');
+      // Refresh audit data to update whatsapp_sent status
+      const data = await getAudit(auditId);
+      setAudit(data);
+    } catch {
+      setResendResult('error');
+    } finally {
+      setResending(false);
+    }
+  };
 
   // ---- Error state ----
   if (error || (audit?.status === 'failed')) {
@@ -181,7 +218,7 @@ export default function DiagnosticoPage() {
                 <CheckIcon className="w-6 h-6 text-green-600" />
               </div>
               <p className="font-serif text-lg font-bold text-charcoal">Pronto!</p>
-              {audit?.whatsapp_number && audit.delivery_mode === 'whatsapp' && (
+              {audit?.whatsapp_number && (
                 <p className="text-sm text-muted-foreground mt-1">
                   Seu diagnóstico foi enviado para o WhatsApp ({audit.whatsapp_number})
                 </p>
@@ -207,6 +244,10 @@ export default function DiagnosticoPage() {
 
   const medalEmoji = ['', '', ''];
 
+  // WhatsApp delivery status
+  const wasSent = audit.whatsapp_sent;
+  const waError = audit.whatsapp_error;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -218,12 +259,43 @@ export default function DiagnosticoPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-8">
-        {/* WhatsApp notice */}
-        {audit.whatsapp_number && audit.delivery_mode === 'whatsapp' && (
+        {/* WhatsApp delivery notice */}
+        {wasSent && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center text-sm text-green-800">
             Seu diagnóstico foi enviado para o WhatsApp ({audit.whatsapp_number}).
             <br />
             <strong>Fique atento ao WhatsApp. Nosso especialista vai te explicar os resultados em seguida.</strong>
+          </div>
+        )}
+
+        {/* WhatsApp error — show retry button */}
+        {!wasSent && waError && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center text-sm text-yellow-800">
+            <p className="mb-2">
+              Não conseguimos enviar o diagnóstico para o WhatsApp ({audit.whatsapp_number}).
+            </p>
+            <button
+              onClick={handleResendWhatsApp}
+              disabled={resending}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium transition disabled:opacity-50"
+            >
+              {resending ? 'Reenviando...' : 'Reenviar para WhatsApp'}
+            </button>
+            {resendResult === 'success' && (
+              <p className="mt-2 text-green-700 font-medium">Enviado com sucesso!</p>
+            )}
+            {resendResult === 'error' && (
+              <p className="mt-2 text-red-700 font-medium">Falha ao reenviar. Tente novamente.</p>
+            )}
+          </div>
+        )}
+
+        {/* WhatsApp not sent yet but no error (still pending) */}
+        {!wasSent && !waError && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center text-sm text-blue-800">
+            Enviando diagnóstico para o WhatsApp ({audit.whatsapp_number})...
+            <br />
+            <span className="text-xs">O resultado também está disponível abaixo.</span>
           </div>
         )}
 
