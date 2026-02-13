@@ -37,15 +37,17 @@ class Settings(BaseSettings):
     # Sentry (error monitoring)
     SENTRY_DSN: Optional[str] = None
 
-    # CORS (env var can be comma-separated string, e.g. on Railway)
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000"]
+    # CORS — accepts comma-separated string or JSON array in env var
+    BACKEND_CORS_ORIGINS: str = "http://localhost:3000"
 
-    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
-        if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        return v
+    @property
+    def cors_origins_list(self) -> List[str]:
+        """Parse CORS origins from string (comma-separated or JSON array)."""
+        val = self.BACKEND_CORS_ORIGINS.strip()
+        if val.startswith("["):
+            import json
+            return json.loads(val)
+        return [origin.strip() for origin in val.split(",") if origin.strip()]
 
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
