@@ -30,7 +30,7 @@ class AuditService:
         self,
         business_name: str,
         location: str,
-        whatsapp: str,
+        whatsapp: Optional[str] = None,
         user_id: Optional[str] = None,
         utm_source: Optional[str] = None,
         utm_medium: Optional[str] = None,
@@ -39,7 +39,8 @@ class AuditService:
     ) -> Dict:
         """Create a new audit request and kick off processing.
 
-        WhatsApp number is required — every audit delivers results via WhatsApp.
+        If a WhatsApp number is provided the report is delivered via WhatsApp.
+        Otherwise the user can download the PDF from the results page.
         """
         try:
             # Check for recent cached audit
@@ -65,9 +66,10 @@ class AuditService:
                 "business_id": business["id"],
                 "user_id": user_id,
                 "status": "pending",
-                "whatsapp_number": whatsapp,
                 "created_at": datetime.utcnow().isoformat(),
             }
+            if whatsapp:
+                audit_data["whatsapp_number"] = whatsapp
 
             # Include UTM params if present (Facebook ad attribution)
             if utm_source:
@@ -241,7 +243,7 @@ class AuditService:
             )
             completed_audit = result.data[0]
 
-            # Step 11: Send WhatsApp report (always — WhatsApp is required)
+            # Step 11: Send WhatsApp report (only if number was provided)
             whatsapp_number = audit.get("whatsapp_number")
             if whatsapp_number:
                 logger.info(f"[{audit_id}] Step 11: Sending WhatsApp")

@@ -64,12 +64,8 @@ function HomeContent() {
       return;
     }
 
-    if (!whatsapp.trim()) {
-      setError('WhatsApp é obrigatório para receber seu diagnóstico.');
-      return;
-    }
-
-    if (!isValidPhoneBR(whatsapp)) {
+    const digits = whatsapp.replace(/\D/g, '');
+    if (digits && !isValidPhoneBR(whatsapp)) {
       setError(
         'Número de WhatsApp inválido. Use DDD + número (ex: 11 99999-1234).'
       );
@@ -83,7 +79,7 @@ function HomeContent() {
       const audit = await createAudit({
         business_name: businessName,
         location,
-        whatsapp: whatsapp.replace(/\D/g, ''),
+        ...(digits ? { whatsapp: digits } : {}),
         ...utmParams,
       });
       router.push(`/diagnostico/${audit.id}`);
@@ -175,15 +171,15 @@ function HomeContent() {
                 />
               </div>
 
-              {/* WhatsApp (required) */}
+              {/* WhatsApp (optional) */}
               <div>
                 <label
                   htmlFor="whatsapp"
                   className="block text-sm font-medium text-charcoal mb-1.5"
                 >
-                  WhatsApp *{' '}
+                  WhatsApp{' '}
                   <span className="text-muted-foreground font-normal">
-                    (você receberá o resultado aqui)
+                    (opcional — receba o resultado por WhatsApp)
                   </span>
                 </label>
                 <input
@@ -194,7 +190,6 @@ function HomeContent() {
                   placeholder="(11) 99999-1234"
                   className="w-full px-4 py-3 border border-border rounded-lg bg-cream/50 focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition placeholder:text-muted-foreground/50"
                   disabled={loading}
-                  required
                 />
               </div>
 
@@ -233,13 +228,13 @@ function HomeContent() {
                     Iniciando...
                   </>
                 ) : (
-                  'Receber Diagnóstico no WhatsApp'
+                  'Iniciar Diagnóstico Gratuito'
                 )}
               </button>
             </form>
 
             <p className="mt-5 text-xs text-muted-foreground text-center">
-              100% gratuito. Resultado direto no seu WhatsApp em menos de 1 minuto.
+              100% gratuito. Resultado em menos de 1 minuto. Baixe o PDF ou receba no WhatsApp.
             </p>
           </div>
 

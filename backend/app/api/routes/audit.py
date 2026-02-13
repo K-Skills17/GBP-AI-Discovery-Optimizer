@@ -21,15 +21,9 @@ logger = logging.getLogger(__name__)
 async def create_audit(request_body: AuditCreateRequest, request: Request):
     """Create a new competitive diagnostic audit.
 
-    WhatsApp number is required — the report is always delivered via WhatsApp
-    (Evolution API) after processing completes.
-
-    Steps:
-    1. Search business via Google Places API
-    2. Find top competitors in same category/area
-    3. Run AI analysis (Gemini)
-    4. Build competitive report
-    5. Send to WhatsApp
+    WhatsApp number is optional. If provided, the report is delivered via
+    WhatsApp after processing. Otherwise the PDF can be downloaded from
+    the results page.
     """
     try:
         # Pull optional user_id from auth middleware

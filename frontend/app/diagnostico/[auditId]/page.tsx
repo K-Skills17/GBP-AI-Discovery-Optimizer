@@ -19,14 +19,15 @@ function fbTrack(event: string, data?: Record<string, unknown>) {
 /* Micro-engagement progress steps                                     */
 /* ------------------------------------------------------------------ */
 
-const STEPS = [
+const BASE_STEPS = [
   { label: 'Localizando sua clínica...', durationMs: 2000 },
   { label: 'Identificando seus principais concorrentes...', durationMs: 4000 },
   { label: 'Analisando presença no Google...', durationMs: 6000 },
   { label: 'Consultando inteligência artificial...', durationMs: 10000 },
   { label: 'Comparando com o Top 3 da sua região...', durationMs: 6000 },
-  { label: 'Enviando resultado para seu WhatsApp...', durationMs: 4000 },
 ];
+const WHATSAPP_STEP = { label: 'Enviando resultado para seu WhatsApp...', durationMs: 4000 };
+const PDF_STEP = { label: 'Preparando seu relatório para download...', durationMs: 4000 };
 
 const MIN_DISPLAY_MS = 45000; // minimum 45 seconds even if backend is faster
 
@@ -66,6 +67,10 @@ export default function DiagnosticoPage() {
   // WhatsApp retry state
   const [resending, setResending] = useState(false);
   const [resendResult, setResendResult] = useState<'success' | 'error' | null>(null);
+
+  // Build steps list based on whether WhatsApp was provided
+  const hasWhatsApp = !!audit?.whatsapp_number;
+  const STEPS = [...BASE_STEPS, hasWhatsApp ? WHATSAPP_STEP : PDF_STEP];
 
   // ---- Poll backend ----
   const pollAudit = useCallback(async () => {
@@ -218,11 +223,11 @@ export default function DiagnosticoPage() {
                 <CheckIcon className="w-6 h-6 text-green-600" />
               </div>
               <p className="font-serif text-lg font-bold text-charcoal">Pronto!</p>
-              {audit?.whatsapp_number && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Seu diagnóstico foi enviado para o WhatsApp ({audit.whatsapp_number})
-                </p>
-              )}
+              <p className="text-sm text-muted-foreground mt-1">
+                {audit?.whatsapp_number
+                  ? `Seu diagnóstico foi enviado para o WhatsApp (${audit.whatsapp_number})`
+                  : 'Seu diagnóstico está pronto para download!'}
+              </p>
             </div>
           )}
         </div>
@@ -291,7 +296,7 @@ export default function DiagnosticoPage() {
         )}
 
         {/* WhatsApp not sent yet but no error (still pending) */}
-        {!wasSent && !waError && (
+        {audit.whatsapp_number && !wasSent && !waError && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center text-sm text-blue-800">
             Enviando diagnóstico para o WhatsApp ({audit.whatsapp_number})...
             <br />

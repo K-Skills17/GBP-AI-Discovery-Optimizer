@@ -16,7 +16,7 @@ export const apiClient = axios.create({
 export interface AuditRequest {
   business_name: string;
   location: string;
-  whatsapp: string;
+  whatsapp?: string;
   utm_source?: string;
   utm_medium?: string;
   utm_campaign?: string;
