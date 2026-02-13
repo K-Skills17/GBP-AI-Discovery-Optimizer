@@ -20,14 +20,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own profile' AND tablename = 'profiles') THEN
-    CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can update own profile' AND tablename = 'profiles') THEN
-    CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
+CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- =============================================
 -- BUSINESSES TABLE
@@ -110,15 +107,16 @@ CREATE INDEX IF NOT EXISTS idx_audits_created_at ON public.audits(created_at DES
 
 ALTER TABLE public.audits ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Users can view own audits' AND tablename = 'audits') THEN
-    CREATE POLICY "Users can view own audits" ON public.audits FOR SELECT
-      USING (auth.uid() = user_id OR auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'admin'));
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Anyone can create audits' AND tablename = 'audits') THEN
-    CREATE POLICY "Anyone can create audits" ON public.audits FOR INSERT WITH CHECK (true);
-  END IF;
-END $$;
+DROP POLICY IF EXISTS "Users can view own audits" ON public.audits;
+CREATE POLICY "Users can view own audits" ON public.audits FOR SELECT
+  USING (auth.uid() = user_id OR auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'admin'));
+
+DROP POLICY IF EXISTS "Anyone can create audits" ON public.audits;
+CREATE POLICY "Anyone can create audits" ON public.audits FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Service role full access audits" ON public.audits;
+CREATE POLICY "Service role full access audits" ON public.audits FOR ALL
+  USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- =============================================
 -- REVIEWS TABLE
