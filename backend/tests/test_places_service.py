@@ -1,4 +1,4 @@
-"""Tests for app.services.places_service — internal helper methods that perform
+"""Tests for app.services.places_service -- internal helper methods that perform
 pure data transformation without making network requests.
 
 Tested methods:
@@ -8,21 +8,29 @@ Tested methods:
     PlacesService._photo_uri
 """
 
+import sys
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
-# Patch settings before importing the module under test so that PlacesService.__init__
-# does not fail when GOOGLE_PLACES_API_KEY is a dummy value.
-with patch("app.services.places_service.get_settings") as _mock_settings:
-    _mock_settings.return_value = MagicMock(GOOGLE_PLACES_API_KEY="fake-key")
-    from app.services.places_service import PlacesService
+# ---------------------------------------------------------------------------
+# Ensure the heavy google.generativeai tree never loads (it is pulled in
+# transitively by other service modules that share the app package).
+# ---------------------------------------------------------------------------
+sys.modules.setdefault("google.generativeai", MagicMock())
+sys.modules.setdefault("app.services.gemini_service", MagicMock())
+
+from app.services.places_service import PlacesService  # noqa: E402
 
 
 @pytest.fixture
 def places_svc():
     """Return a PlacesService instance with a fake API key."""
-    with patch("app.services.places_service.settings", MagicMock(GOOGLE_PLACES_API_KEY="fake-key")):
-        svc = PlacesService()
+    svc = object.__new__(PlacesService)
+    svc.api_key = "fake-key"
+    svc.headers = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": "fake-key",
+    }
     return svc
 
 

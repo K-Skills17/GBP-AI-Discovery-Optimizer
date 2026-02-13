@@ -1,4 +1,4 @@
-"""Tests for app.services.competitor_service — internal helper methods that
+"""Tests for app.services.competitor_service -- internal helper methods that
 perform pure data transformation and comparison logic.
 
 Tested methods:
@@ -8,14 +8,26 @@ Tested methods:
     CompetitorService._empty_result
 """
 
+import sys
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
-# Patch the service-level singletons that are imported at module load time so
-# we never touch real Google/Gemini APIs.
-with patch("app.services.competitor_service.places_service", MagicMock()), \
-     patch("app.services.competitor_service.gemini_service", MagicMock()):
-    from app.services.competitor_service import CompetitorService
+# ---------------------------------------------------------------------------
+# Prevent the real gemini_service (and its heavy google.generativeai import)
+# from being loaded.  We inject mock modules into sys.modules BEFORE importing
+# competitor_service so the ``from app.services.gemini_service import ...``
+# inside that file resolves to our lightweight stub.
+# ---------------------------------------------------------------------------
+
+# Stub the entire google.generativeai tree that gemini_service.py imports
+_genai_mock = MagicMock()
+sys.modules.setdefault("google.generativeai", _genai_mock)
+
+# Stub gemini_service itself so its module-level code (genai.configure, etc.) is harmless
+_gemini_svc_module = MagicMock()
+sys.modules.setdefault("app.services.gemini_service", _gemini_svc_module)
+
+from app.services.competitor_service import CompetitorService  # noqa: E402
 
 
 @pytest.fixture
@@ -348,9 +360,9 @@ class TestCalculateCompetitiveScore:
         score_without = svc._calculate_competitive_score(
             business, competitors, {}
         )
-        business["website"] = "https://example.com"
+        business_with_site = {**business, "website": "https://example.com"}
         score_with = svc._calculate_competitive_score(
-            business, competitors, {}
+            business_with_site, competitors, {}
         )
         assert score_with - score_without == 10
 

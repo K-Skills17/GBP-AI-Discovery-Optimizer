@@ -6,6 +6,7 @@ Gemini, Supabase, Redis, WhatsApp/Evolution API).
 """
 
 import os
+import sys
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock, AsyncMock
@@ -22,6 +23,18 @@ os.environ.setdefault("GEMINI_API_KEY", "fake-gemini-key")
 os.environ.setdefault("OPENAI_API_KEY", "fake-openai-key")
 os.environ.setdefault("EVOLUTION_API_KEY", "fake-evolution-key")
 os.environ.setdefault("SENTRY_DSN", "")
+
+# ---------------------------------------------------------------------------
+# Stub heavy third-party packages that fail to import in the test environment
+# (e.g. google.generativeai depends on a native cryptography backend).
+# These stubs must be injected BEFORE any app module is imported.
+# ---------------------------------------------------------------------------
+
+_genai_stub = MagicMock()
+sys.modules.setdefault("google.generativeai", _genai_stub)
+
+_gemini_svc_stub = MagicMock()
+sys.modules.setdefault("app.services.gemini_service", _gemini_svc_stub)
 
 
 # ---------------------------------------------------------------------------
