@@ -16,8 +16,11 @@ export const apiClient = axios.create({
 export interface AuditRequest {
   business_name: string;
   location: string;
-  whatsapp?: string;
-  delivery_mode?: 'standalone' | 'whatsapp';
+  whatsapp: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -71,6 +74,13 @@ export interface CompetitorAnalysis {
   competitive_score: number;
 }
 
+export interface WhatsAppStatus {
+  whatsapp_sent: boolean;
+  whatsapp_sent_at: string | null;
+  whatsapp_error: string | null;
+  whatsapp_number: string;
+}
+
 export interface Audit {
   id: string;
   business_id: string;
@@ -119,10 +129,12 @@ export interface Audit {
   }>;
   processing_time_seconds?: number;
   error_message?: string;
-  delivery_mode?: string;
-  whatsapp_number?: string;
+  whatsapp_number: string;
   whatsapp_sent?: boolean;
   whatsapp_sent_at?: string;
+  whatsapp_error?: string;
+  utm_source?: string;
+  utm_campaign?: string;
   created_at: string;
   updated_at: string;
 }
@@ -148,6 +160,11 @@ export const getCompetitors = async (auditId: string): Promise<CompetitorAnalysi
 
 export const sendWhatsApp = async (auditId: string): Promise<{ success: boolean; message_id?: string }> => {
   const response = await apiClient.post(`/audits/${auditId}/send-whatsapp`);
+  return response.data;
+};
+
+export const getWhatsAppStatus = async (auditId: string): Promise<WhatsAppStatus> => {
+  const response = await apiClient.get<WhatsAppStatus>(`/audits/${auditId}/whatsapp-status`);
   return response.data;
 };
 

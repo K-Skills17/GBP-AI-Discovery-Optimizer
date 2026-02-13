@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
@@ -6,11 +6,21 @@ from datetime import datetime
 class AuditCreateRequest(BaseModel):
     business_name: str = Field(..., min_length=2, max_length=200)
     location: str = Field(..., min_length=2, max_length=100)
-    whatsapp: Optional[str] = Field(None, max_length=20)
-    delivery_mode: str = Field(
-        default="standalone",
-        pattern="^(standalone|whatsapp)$",
-    )
+    whatsapp: str = Field(..., min_length=10, max_length=20)
+    utm_source: Optional[str] = Field(None, max_length=100)
+    utm_medium: Optional[str] = Field(None, max_length=100)
+    utm_campaign: Optional[str] = Field(None, max_length=200)
+    utm_content: Optional[str] = Field(None, max_length=200)
+
+    @field_validator("whatsapp")
+    @classmethod
+    def validate_whatsapp(cls, v: str) -> str:
+        digits = "".join(c for c in v if c.isdigit())
+        if len(digits) < 10 or len(digits) > 13:
+            raise ValueError(
+                "Número de WhatsApp inválido. Use o formato: DDD + número (ex: 11999991234)"
+            )
+        return v
 
     class Config:
         json_schema_extra = {
@@ -18,7 +28,8 @@ class AuditCreateRequest(BaseModel):
                 "business_name": "Clínica Dental Sorriso",
                 "location": "São Paulo",
                 "whatsapp": "11999991234",
-                "delivery_mode": "whatsapp",
+                "utm_source": "facebook",
+                "utm_campaign": "dental_sp_jan",
             }
         }
 
@@ -56,10 +67,14 @@ class AuditResponse(BaseModel):
     recommendations: Optional[List[Dict[str, Any]]] = None
     processing_time_seconds: Optional[int] = None
     error_message: Optional[str] = None
-    delivery_mode: Optional[str] = "standalone"
-    whatsapp_number: Optional[str] = None
+    whatsapp_number: str
     whatsapp_sent: Optional[bool] = None
     whatsapp_sent_at: Optional[datetime] = None
+    whatsapp_error: Optional[str] = None
+    utm_source: Optional[str] = None
+    utm_medium: Optional[str] = None
+    utm_campaign: Optional[str] = None
+    utm_content: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

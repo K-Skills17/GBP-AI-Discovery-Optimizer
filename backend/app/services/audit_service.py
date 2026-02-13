@@ -30,11 +30,17 @@ class AuditService:
         self,
         business_name: str,
         location: str,
-        whatsapp: Optional[str] = None,
-        delivery_mode: str = "standalone",
+        whatsapp: str,
         user_id: Optional[str] = None,
+        utm_source: Optional[str] = None,
+        utm_medium: Optional[str] = None,
+        utm_campaign: Optional[str] = None,
+        utm_content: Optional[str] = None,
     ) -> Dict:
-        """Create a new audit request and kick off processing."""
+        """Create a new audit request and kick off processing.
+
+        WhatsApp number is required — every audit delivers results via WhatsApp.
+        """
         try:
             # Check for recent cached audit
             existing = await self._check_existing_audit(business_name, location)
@@ -59,10 +65,20 @@ class AuditService:
                 "business_id": business["id"],
                 "user_id": user_id,
                 "status": "pending",
-                "delivery_mode": delivery_mode,
                 "whatsapp_number": whatsapp,
                 "created_at": datetime.utcnow().isoformat(),
             }
+
+            # Include UTM params if present (Facebook ad attribution)
+            if utm_source:
+                audit_data["utm_source"] = utm_source
+            if utm_medium:
+                audit_data["utm_medium"] = utm_medium
+            if utm_campaign:
+                audit_data["utm_campaign"] = utm_campaign
+            if utm_content:
+                audit_data["utm_content"] = utm_content
+
             result = self.supabase.table("audits").insert(audit_data).execute()
             audit = result.data[0]
 
@@ -225,14 +241,27 @@ class AuditService:
             )
             completed_audit = result.data[0]
 
-            # Step 11: Send WhatsApp report (if requested)
+            # Step 11: Send WhatsApp report (always — WhatsApp is required)
             whatsapp_number = audit.get("whatsapp_number")
-            delivery_mode = audit.get("delivery_mode", "standalone")
-            if whatsapp_number and delivery_mode == "whatsapp":
+            if whatsapp_number:
                 logger.info(f"[{audit_id}] Step 11: Sending WhatsApp")
-                await self._send_whatsapp_report(
+                wa_result = await self._send_whatsapp_report(
                     audit_id, whatsapp_number, completed_audit, business
                 )
+                # Retry once on failure
+                if not wa_result.get("success"):
+                    logger.warning(
+                        f"[{audit_id}] WhatsApp first attempt failed, retrying..."
+                    )
+                    await asyncio.sleep(3)
+                    wa_result = await self._send_whatsapp_report(
+                        audit_id, whatsapp_number, completed_audit, business
+                    )
+                    if not wa_result.get("success"):
+                        # Record the error so frontend can show retry button
+                        self.supabase.table("audits").update(
+                            {"whatsapp_error": wa_result.get("error", "Falha no envio")}
+                        ).eq("id", audit_id).execute()
 
             logger.info(
                 f"Audit {audit_id} completed in {processing_time}s"
@@ -381,7 +410,7 @@ class AuditService:
             "place_id", "name", "address", "city", "state", "category",
             "phone", "website", "rating", "total_reviews", "claimed",
             "latitude", "longitude", "description", "hours", "photos",
-            "raw_data",
+            "photos_count", "google_maps_url", "raw_data",
         }
         filtered = {
             k: v for k, v in business_data.items() if k in allowed_cols

@@ -1,5 +1,6 @@
--- GBP AI Discovery Optimizer - Supabase Schema (v2)
+-- GBP AI Discovery Optimizer - Supabase Schema (v3)
 -- Execute this in your Supabase SQL Editor
+-- WhatsApp is now REQUIRED for all audits (Facebook ad funnel)
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -47,6 +48,8 @@ CREATE TABLE IF NOT EXISTS public.businesses (
     description TEXT,
     hours JSONB,
     photos JSONB,
+    photos_count INTEGER DEFAULT 0,
+    google_maps_url TEXT,
     questions_and_answers JSONB,
     data_source TEXT DEFAULT 'google_places',
     raw_data JSONB,
@@ -58,8 +61,17 @@ CREATE INDEX IF NOT EXISTS idx_businesses_place_id ON public.businesses(place_id
 CREATE INDEX IF NOT EXISTS idx_businesses_city ON public.businesses(city);
 CREATE INDEX IF NOT EXISTS idx_businesses_name ON public.businesses(name);
 
+-- Migration: ensure v3 columns exist on businesses
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos_count INTEGER DEFAULT 0;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
+
 -- =============================================
--- AUDITS TABLE (v2 — with competitor + WhatsApp fields)
+-- AUDITS TABLE (v3 — WhatsApp required, UTM tracking)
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.audits (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -69,11 +81,17 @@ CREATE TABLE IF NOT EXISTS public.audits (
     -- Status
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
 
-    -- Delivery
-    delivery_mode TEXT DEFAULT 'standalone' CHECK (delivery_mode IN ('standalone', 'whatsapp')),
-    whatsapp_number TEXT,
+    -- WhatsApp delivery (always required)
+    whatsapp_number TEXT NOT NULL,
     whatsapp_sent BOOLEAN DEFAULT false,
     whatsapp_sent_at TIMESTAMPTZ,
+    whatsapp_error TEXT,
+
+    -- UTM tracking (Facebook ads attribution)
+    utm_source TEXT,
+    utm_medium TEXT,
+    utm_campaign TEXT,
+    utm_content TEXT,
 
     -- Scores
     discovery_score INTEGER CHECK (discovery_score >= 0 AND discovery_score <= 100),
@@ -104,6 +122,23 @@ CREATE INDEX IF NOT EXISTS idx_audits_business_id ON public.audits(business_id);
 CREATE INDEX IF NOT EXISTS idx_audits_user_id ON public.audits(user_id);
 CREATE INDEX IF NOT EXISTS idx_audits_status ON public.audits(status);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON public.audits(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audits_utm_source ON public.audits(utm_source);
+CREATE INDEX IF NOT EXISTS idx_audits_utm_campaign ON public.audits(utm_campaign);
+
+-- Migration: ensure v3 columns exist on audits
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_error TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitive_score DECIMAL(5,2);
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitor_analysis JSONB;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_source TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_medium TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_content TEXT;
+
+-- Remove delivery_mode column if it exists (WhatsApp is always the mode now)
+-- Run manually: ALTER TABLE public.audits DROP COLUMN IF EXISTS delivery_mode;
 
 ALTER TABLE public.audits ENABLE ROW LEVEL SECURITY;
 
@@ -142,8 +177,12 @@ CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON public.reviews(business_id
 CREATE INDEX IF NOT EXISTS idx_reviews_published_at ON public.reviews(published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_rating ON public.reviews(rating);
 
+-- Migration: ensure v2 columns exist on reviews
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
+
 -- =============================================
--- COMPETITORS TABLE (NEW in v2)
+-- COMPETITORS TABLE (v3 — fixed column names to match code)
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.competitors (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -154,10 +193,11 @@ CREATE TABLE IF NOT EXISTS public.competitors (
     address TEXT,
     city TEXT,
     rating DECIMAL(2,1),
-    review_count INTEGER DEFAULT 0,
+    total_reviews INTEGER DEFAULT 0,
     category TEXT,
     photos_count INTEGER DEFAULT 0,
     website TEXT,
+    google_maps_url TEXT,
     distance_meters INTEGER,
     strengths JSONB DEFAULT '[]',
     weaknesses JSONB DEFAULT '[]',
@@ -167,8 +207,14 @@ CREATE TABLE IF NOT EXISTS public.competitors (
 
 CREATE INDEX IF NOT EXISTS idx_competitors_audit_id ON public.competitors(audit_id);
 
+-- Migration: ensure v3 columns exist on competitors
+ALTER TABLE public.competitors ADD COLUMN IF NOT EXISTS total_reviews INTEGER DEFAULT 0;
+ALTER TABLE public.competitors ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
+-- Rename review_count to total_reviews if needed (run manually if upgrading):
+-- ALTER TABLE public.competitors RENAME COLUMN review_count TO total_reviews;
+
 -- =============================================
--- WHATSAPP MESSAGES TABLE (NEW in v2)
+-- WHATSAPP MESSAGES TABLE (v2)
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -176,6 +222,7 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
     phone_number TEXT NOT NULL,
     message_type TEXT DEFAULT 'diagnostic_report',
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+    retry_count INTEGER DEFAULT 0,
     evolution_message_id TEXT,
     error_message TEXT,
     sent_at TIMESTAMPTZ,
@@ -186,6 +233,9 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
 
 CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_audit_id ON public.whatsapp_messages(audit_id);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_status ON public.whatsapp_messages(status);
+
+-- Migration: ensure v3 columns exist on whatsapp_messages
+ALTER TABLE public.whatsapp_messages ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;
 
 -- =============================================
 -- PAYMENTS TABLE (Future use)
@@ -250,8 +300,10 @@ SELECT
     a.status,
     a.discovery_score,
     a.competitive_score,
-    a.delivery_mode,
+    a.whatsapp_number,
     a.whatsapp_sent,
+    a.utm_source,
+    a.utm_campaign,
     a.created_at,
     a.processing_time_seconds,
     b.name as business_name,
@@ -261,23 +313,6 @@ SELECT
 FROM public.audits a
 JOIN public.businesses b ON a.business_id = b.id
 ORDER BY a.created_at DESC;
-
--- =============================================
--- MIGRATION: Add v2 columns to existing tables
--- =============================================
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS delivery_mode TEXT DEFAULT 'standalone';
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitive_score DECIMAL(5,2);
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitor_analysis JSONB;
 
 -- =============================================
 -- COMPLETED — Verify

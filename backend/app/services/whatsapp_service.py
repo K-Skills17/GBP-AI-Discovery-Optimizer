@@ -178,6 +178,21 @@ class WhatsAppService:
     # ------------------------------------------------------------------
 
     @staticmethod
+    def validate_phone_br(phone: str) -> bool:
+        """Validate that a phone string looks like a Brazilian mobile number."""
+        digits = "".join(c for c in phone if c.isdigit())
+        # Strip country code
+        if digits.startswith("55"):
+            digits = digits[2:]
+        # Brazilian mobile: 2-digit DDD + 9-digit number starting with 9
+        if len(digits) == 11 and digits[2] == "9":
+            return True
+        # Some older 10-digit formats still work
+        if len(digits) == 10:
+            return True
+        return False
+
+    @staticmethod
     def _format_phone_br(phone: str) -> str:
         """Normalize Brazilian phone to E.164-ish format for Evolution API.
 
