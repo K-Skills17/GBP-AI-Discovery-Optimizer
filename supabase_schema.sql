@@ -58,6 +58,13 @@ CREATE INDEX IF NOT EXISTS idx_businesses_place_id ON public.businesses(place_id
 CREATE INDEX IF NOT EXISTS idx_businesses_city ON public.businesses(city);
 CREATE INDEX IF NOT EXISTS idx_businesses_name ON public.businesses(name);
 
+-- Migration: ensure v2 columns exist on businesses
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
+
 -- =============================================
 -- AUDITS TABLE (v2 — with competitor + WhatsApp fields)
 -- =============================================
@@ -105,6 +112,14 @@ CREATE INDEX IF NOT EXISTS idx_audits_user_id ON public.audits(user_id);
 CREATE INDEX IF NOT EXISTS idx_audits_status ON public.audits(status);
 CREATE INDEX IF NOT EXISTS idx_audits_created_at ON public.audits(created_at DESC);
 
+-- Migration: ensure v2 columns exist on audits
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS delivery_mode TEXT DEFAULT 'standalone';
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitive_score DECIMAL(5,2);
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitor_analysis JSONB;
+
 ALTER TABLE public.audits ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can view own audits" ON public.audits;
@@ -141,6 +156,10 @@ CREATE TABLE IF NOT EXISTS public.reviews (
 CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON public.reviews(business_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_published_at ON public.reviews(published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_rating ON public.reviews(rating);
+
+-- Migration: ensure v2 columns exist on reviews
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
 
 -- =============================================
 -- COMPETITORS TABLE (NEW in v2)
@@ -241,25 +260,7 @@ CREATE TRIGGER update_payments_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================
--- MIGRATION: Add v2 columns to existing tables
--- (must run BEFORE views that reference new columns)
--- =============================================
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS delivery_mode TEXT DEFAULT 'standalone';
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitive_score DECIMAL(5,2);
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitor_analysis JSONB;
-
--- =============================================
--- VIEWS (after migrations so all columns exist)
+-- VIEWS
 -- =============================================
 
 CREATE OR REPLACE VIEW public.recent_audits AS
