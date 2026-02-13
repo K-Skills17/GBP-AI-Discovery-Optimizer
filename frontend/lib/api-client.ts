@@ -78,7 +78,7 @@ export interface WhatsAppStatus {
   whatsapp_sent: boolean;
   whatsapp_sent_at: string | null;
   whatsapp_error: string | null;
-  whatsapp_number: string;
+  whatsapp_number: string | null;
 }
 
 export interface Audit {
@@ -129,7 +129,7 @@ export interface Audit {
   }>;
   processing_time_seconds?: number;
   error_message?: string;
-  whatsapp_number: string;
+  whatsapp_number?: string;
   whatsapp_sent?: boolean;
   whatsapp_sent_at?: string;
   whatsapp_error?: string;
