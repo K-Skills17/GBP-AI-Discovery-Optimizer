@@ -1,12 +1,23 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Playfair_Display, Inter } from 'next/font/google'
 import './globals.css'
 
-const inter = Inter({ subsets: ['latin'] })
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  variable: '--font-serif',
+  display: 'swap',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
-  title: 'AI Discovery Optimizer - Otimize seu perfil no Google',
-  description: 'Descubra como a IA do Google vê seu negócio e otimize sua presença online',
+  title: 'Diagnóstico Competitivo - AI Discovery Optimizer',
+  description:
+    'Descubra como a IA do Google vê sua clínica, quem domina sua região e o que fazer para aparecer nas buscas com IA.',
 }
 
 export default function RootLayout({
@@ -15,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="pt-BR">
-      <body className={inter.className}>{children}</body>
+    <html lang="pt-BR" className={`${playfair.variable} ${inter.variable}`}>
+      <body className="font-sans antialiased">{children}</body>
     </html>
   )
 }
