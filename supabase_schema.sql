@@ -241,7 +241,25 @@ CREATE TRIGGER update_payments_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================
--- VIEWS
+-- MIGRATION: Add v2 columns to existing tables
+-- (must run BEFORE views that reference new columns)
+-- =============================================
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS delivery_mode TEXT DEFAULT 'standalone';
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitive_score DECIMAL(5,2);
+ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitor_analysis JSONB;
+
+-- =============================================
+-- VIEWS (after migrations so all columns exist)
 -- =============================================
 
 CREATE OR REPLACE VIEW public.recent_audits AS
@@ -261,23 +279,6 @@ SELECT
 FROM public.audits a
 JOIN public.businesses b ON a.business_id = b.id
 ORDER BY a.created_at DESC;
-
--- =============================================
--- MIGRATION: Add v2 columns to existing tables
--- =============================================
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
-ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS delivery_mode TEXT DEFAULT 'standalone';
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitive_score DECIMAL(5,2);
-ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS competitor_analysis JSONB;
 
 -- =============================================
 -- COMPLETED — Verify
