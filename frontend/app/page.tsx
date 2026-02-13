@@ -3,20 +3,22 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createAudit } from '@/lib/api-client';
-import { Loader2, Search, Sparkles } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
   const [businessName, setBusinessName] = useState('');
   const [location, setLocation] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const deliveryMode = whatsapp.trim() ? 'whatsapp' : 'standalone';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!businessName || !location) {
-      setError('Por favor, preencha todos os campos');
+      setError('Por favor, preencha o nome da clínica e a cidade.');
       return;
     }
 
@@ -26,16 +28,16 @@ export default function Home() {
     try {
       const audit = await createAudit({
         business_name: businessName,
-        location: location,
+        location,
+        whatsapp: whatsapp.trim() || undefined,
+        delivery_mode: deliveryMode,
       });
-
-      // Redirect to results page
-      router.push(`/resultado/${audit.id}`);
+      router.push(`/diagnostico/${audit.id}`);
     } catch (err: any) {
       console.error('Error creating audit:', err);
       setError(
-        err.response?.data?.detail || 
-        'Erro ao criar auditoria. Verifique se o negócio existe e tente novamente.'
+        err.response?.data?.detail ||
+          'Erro ao iniciar diagnóstico. Verifique os dados e tente novamente.'
       );
     } finally {
       setLoading(false);
@@ -43,52 +45,51 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">
-                AI Discovery Optimizer
-              </span>
-            </div>
-            <span className="text-sm text-gray-600">by LK Digital</span>
-          </div>
+      <header className="border-b border-border bg-white/80 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <span className="font-serif text-xl font-bold text-charcoal tracking-tight">
+            AI Discovery Optimizer
+          </span>
+          <span className="text-sm text-muted-foreground">by LK Digital</span>
         </div>
       </header>
 
-      {/* Hero Section */}
+      {/* Hero */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Como a IA do Google
+          <h1 className="font-serif text-4xl sm:text-5xl font-bold text-charcoal mb-6 leading-tight">
+            Quem domina sua região
             <br />
-            <span className="text-blue-600">vê seu negócio?</span>
+            <span className="text-gold">nas buscas com IA?</span>
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Descubra em minutos como a inteligência artificial percebe sua empresa
-            e o que está impedindo você de aparecer nas buscas com IA.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            Descubra em minutos como a inteligência artificial vê sua clínica,
+            quem são seus concorrentes mais fortes e o que fazer para aparecer.
           </p>
         </div>
 
-        {/* Audit Form Card */}
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
+        {/* Form card */}
+        <div className="max-w-xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-lg border border-border p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Auditoria Gratuita
+              <h2 className="font-serif text-2xl font-bold text-charcoal mb-1">
+                Diagnóstico Competitivo Gratuito
               </h2>
-              <p className="text-gray-600">
-                Análise completa do seu perfil no Google Meu Negócio
+              <p className="text-muted-foreground text-sm">
+                Comparamos sua clínica com o Top 3 da sua região
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Business name */}
               <div>
-                <label htmlFor="business_name" className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome do Negócio *
+                <label
+                  htmlFor="business_name"
+                  className="block text-sm font-medium text-charcoal mb-1.5"
+                >
+                  Nome da clínica *
                 </label>
                 <input
                   id="business_name"
@@ -96,13 +97,17 @@ export default function Home() {
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="Ex: Clínica Dental Sorriso"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-3 border border-border rounded-lg bg-cream/50 focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition placeholder:text-muted-foreground/50"
                   disabled={loading}
                 />
               </div>
 
+              {/* City */}
               <div>
-                <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="location"
+                  className="block text-sm font-medium text-charcoal mb-1.5"
+                >
                   Cidade *
                 </label>
                 <input
@@ -111,13 +116,35 @@ export default function Home() {
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   placeholder="Ex: São Paulo"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
+                  className="w-full px-4 py-3 border border-border rounded-lg bg-cream/50 focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition placeholder:text-muted-foreground/50"
+                  disabled={loading}
+                />
+              </div>
+
+              {/* WhatsApp (optional) */}
+              <div>
+                <label
+                  htmlFor="whatsapp"
+                  className="block text-sm font-medium text-charcoal mb-1.5"
+                >
+                  WhatsApp{' '}
+                  <span className="text-muted-foreground font-normal">
+                    (opcional — receba o relatório direto no celular)
+                  </span>
+                </label>
+                <input
+                  id="whatsapp"
+                  type="tel"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="Ex: 11 99999-1234"
+                  className="w-full px-4 py-3 border border-border rounded-lg bg-cream/50 focus:ring-2 focus:ring-gold focus:border-transparent outline-none transition placeholder:text-muted-foreground/50"
                   disabled={loading}
                 />
               </div>
 
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                   {error}
                 </div>
               )}
@@ -125,64 +152,113 @@ export default function Home() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gold hover:bg-gold-dark text-white font-semibold py-4 px-6 rounded-lg transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Analisando...
+                    <svg
+                      className="w-5 h-5 animate-spin"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    Iniciando...
                   </>
                 ) : (
-                  <>
-                    <Search className="w-5 h-5" />
-                    Iniciar Auditoria Gratuita
-                  </>
+                  'Iniciar Diagnóstico Gratuito'
                 )}
               </button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-start gap-3 text-sm text-gray-600">
-                <Sparkles className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p>
-                  <strong className="text-gray-900">100% Gratuito.</strong> Receba em minutos
-                  uma análise completa de como a IA do Google percebe seu negócio.
-                </p>
-              </div>
-            </div>
+            <p className="mt-5 text-xs text-muted-foreground text-center">
+              100% gratuito. Resultado em menos de 1 minuto.
+            </p>
           </div>
 
           {/* Features */}
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="bg-blue-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Search className="w-6 h-6 text-blue-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Análise AI</h3>
-              <p className="text-sm text-gray-600">
-                Como o Gemini vê seu negócio agora
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-purple-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Sparkles className="w-6 h-6 text-purple-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Score de Descoberta</h3>
-              <p className="text-sm text-gray-600">
-                Métrica exclusiva de visibilidade AI
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+            <div>
+              <div className="w-12 h-12 rounded-full bg-gold-light flex items-center justify-center mx-auto mb-3">
+                <svg
+                  className="w-6 h-6 text-gold-dark"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
                 </svg>
               </div>
-              <h3 className="font-semibold text-gray-900 mb-1">Ações Prioritárias</h3>
-              <p className="text-sm text-gray-600">
-                O que fazer para melhorar hoje
+              <h3 className="font-serif font-semibold text-charcoal mb-1">
+                Análise com IA
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Como o Google Gemini vê sua clínica agora
+              </p>
+            </div>
+
+            <div>
+              <div className="w-12 h-12 rounded-full bg-gold-light flex items-center justify-center mx-auto mb-3">
+                <svg
+                  className="w-6 h-6 text-gold-dark"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="font-serif font-semibold text-charcoal mb-1">
+                Top 3 Concorrentes
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Quem domina as buscas na sua cidade
+              </p>
+            </div>
+
+            <div>
+              <div className="w-12 h-12 rounded-full bg-gold-light flex items-center justify-center mx-auto mb-3">
+                <svg
+                  className="w-6 h-6 text-gold-dark"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <h3 className="font-serif font-semibold text-charcoal mb-1">
+                Plano de Ação
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Passos específicos para fechar as lacunas
               </p>
             </div>
           </div>
@@ -190,10 +266,11 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t bg-white/80 backdrop-blur-sm mt-20">
+      <footer className="border-t border-border bg-white/80 backdrop-blur-sm mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <p className="text-center text-gray-600 text-sm">
-            © 2024 LK Digital. Todos os direitos reservados.
+          <p className="text-center text-muted-foreground text-sm">
+            &copy; {new Date().getFullYear()} LK Digital. Todos os direitos
+            reservados.
           </p>
         </div>
       </footer>
