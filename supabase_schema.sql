@@ -1,12 +1,15 @@
--- GBP AI Discovery Optimizer - Supabase Schema (v3)
--- Execute this in your Supabase SQL Editor
--- WhatsApp is now REQUIRED for all audits (Facebook ad funnel)
+-- =============================================
+-- GBP AI Discovery Optimizer — Complete Schema v3
+-- =============================================
+-- Safe to run on a fresh DB or an existing one.
+-- Every statement is idempotent (IF NOT EXISTS / IF EXISTS).
+-- Paste the ENTIRE file into Supabase SQL Editor and click Run.
+-- =============================================
 
--- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- =============================================
--- PROFILES TABLE
+-- 1. PROFILES
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.profiles (
     id UUID REFERENCES auth.users(id) PRIMARY KEY,
@@ -20,15 +23,13 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- =============================================
--- BUSINESSES TABLE
+-- 2. BUSINESSES
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.businesses (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -43,8 +44,8 @@ CREATE TABLE IF NOT EXISTS public.businesses (
     rating DECIMAL(2,1),
     total_reviews INTEGER DEFAULT 0,
     claimed BOOLEAN DEFAULT false,
-    latitude DECIMAL(10, 8),
-    longitude DECIMAL(11, 8),
+    latitude DECIMAL(10,8),
+    longitude DECIMAL(11,8),
     description TEXT,
     hours JSONB,
     photos JSONB,
@@ -57,11 +58,7 @@ CREATE TABLE IF NOT EXISTS public.businesses (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_businesses_place_id ON public.businesses(place_id);
-CREATE INDEX IF NOT EXISTS idx_businesses_city ON public.businesses(city);
-CREATE INDEX IF NOT EXISTS idx_businesses_name ON public.businesses(name);
-
--- Migration: ensure v3 columns exist on businesses
+-- Columns that may be missing from older versions
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS description TEXT;
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS hours JSONB;
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos JSONB;
@@ -69,63 +66,47 @@ ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS photos_count INTEGER DEFA
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS questions_and_answers JSONB;
 ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS data_source TEXT DEFAULT 'google_places';
+ALTER TABLE public.businesses ADD COLUMN IF NOT EXISTS raw_data JSONB;
+
+CREATE INDEX IF NOT EXISTS idx_businesses_place_id ON public.businesses(place_id);
+CREATE INDEX IF NOT EXISTS idx_businesses_city ON public.businesses(city);
+CREATE INDEX IF NOT EXISTS idx_businesses_name ON public.businesses(name);
 
 -- =============================================
--- AUDITS TABLE (v3 — WhatsApp required, UTM tracking)
+-- 3. AUDITS
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.audits (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     business_id UUID REFERENCES public.businesses(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-
-    -- Status
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed')),
-
-    -- WhatsApp delivery (always required)
-    whatsapp_number TEXT NOT NULL,
+    user_id UUID,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
+    whatsapp_number TEXT,
     whatsapp_sent BOOLEAN DEFAULT false,
     whatsapp_sent_at TIMESTAMPTZ,
     whatsapp_error TEXT,
-
-    -- UTM tracking (Facebook ads attribution)
     utm_source TEXT,
     utm_medium TEXT,
     utm_campaign TEXT,
     utm_content TEXT,
-
-    -- Scores
     discovery_score INTEGER CHECK (discovery_score >= 0 AND discovery_score <= 100),
     competitive_score DECIMAL(5,2),
     sentiment_score DECIMAL(3,2) CHECK (sentiment_score >= 0 AND sentiment_score <= 1),
     visual_coverage_score DECIMAL(3,2) CHECK (visual_coverage_score >= 0 AND visual_coverage_score <= 1),
-
-    -- AI Analysis Results (stored as JSONB)
     ai_summary JSONB,
     sentiment_analysis JSONB,
     conversational_queries JSONB,
     visual_audit JSONB,
     competitor_analysis JSONB,
     recommendations JSONB,
-
-    -- Report
     pdf_url TEXT,
     report_expires_at TIMESTAMPTZ,
-
-    -- Metadata
     processing_time_seconds INTEGER,
     error_message TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_audits_business_id ON public.audits(business_id);
-CREATE INDEX IF NOT EXISTS idx_audits_user_id ON public.audits(user_id);
-CREATE INDEX IF NOT EXISTS idx_audits_status ON public.audits(status);
-CREATE INDEX IF NOT EXISTS idx_audits_created_at ON public.audits(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audits_utm_source ON public.audits(utm_source);
-CREATE INDEX IF NOT EXISTS idx_audits_utm_campaign ON public.audits(utm_campaign);
-
--- Migration: ensure v3 columns exist on audits
+-- Columns that may be missing from older versions
 ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_number TEXT;
 ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent BOOLEAN DEFAULT false;
 ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS whatsapp_sent_at TIMESTAMPTZ;
@@ -137,24 +118,26 @@ ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_medium TEXT;
 ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_campaign TEXT;
 ALTER TABLE public.audits ADD COLUMN IF NOT EXISTS utm_content TEXT;
 
--- Remove delivery_mode column if it exists (WhatsApp is always the mode now)
--- Run manually: ALTER TABLE public.audits DROP COLUMN IF EXISTS delivery_mode;
+-- Drop old delivery_mode column if it exists
+ALTER TABLE public.audits DROP COLUMN IF EXISTS delivery_mode;
+
+CREATE INDEX IF NOT EXISTS idx_audits_business_id ON public.audits(business_id);
+CREATE INDEX IF NOT EXISTS idx_audits_status ON public.audits(status);
+CREATE INDEX IF NOT EXISTS idx_audits_created_at ON public.audits(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audits_utm_source ON public.audits(utm_source);
+CREATE INDEX IF NOT EXISTS idx_audits_utm_campaign ON public.audits(utm_campaign);
 
 ALTER TABLE public.audits ENABLE ROW LEVEL SECURITY;
-
-DROP POLICY IF EXISTS "Users can view own audits" ON public.audits;
-CREATE POLICY "Users can view own audits" ON public.audits FOR SELECT
-  USING (auth.uid() = user_id OR auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'admin'));
-
 DROP POLICY IF EXISTS "Anyone can create audits" ON public.audits;
 CREATE POLICY "Anyone can create audits" ON public.audits FOR INSERT WITH CHECK (true);
-
+DROP POLICY IF EXISTS "Anyone can view audits" ON public.audits;
+CREATE POLICY "Anyone can view audits" ON public.audits FOR SELECT USING (true);
 DROP POLICY IF EXISTS "Service role full access audits" ON public.audits;
 CREATE POLICY "Service role full access audits" ON public.audits FOR ALL
   USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
 -- =============================================
--- REVIEWS TABLE
+-- 4. REVIEWS
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.reviews (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -173,16 +156,15 @@ CREATE TABLE IF NOT EXISTS public.reviews (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
+
 CREATE INDEX IF NOT EXISTS idx_reviews_business_id ON public.reviews(business_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_published_at ON public.reviews(published_at DESC);
 CREATE INDEX IF NOT EXISTS idx_reviews_rating ON public.reviews(rating);
 
--- Migration: ensure v2 columns exist on reviews
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS likes INTEGER;
-ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS photos JSONB;
-
 -- =============================================
--- COMPETITORS TABLE (v3 — fixed column names to match code)
+-- 5. COMPETITORS
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.competitors (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
@@ -205,23 +187,20 @@ CREATE TABLE IF NOT EXISTS public.competitors (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_competitors_audit_id ON public.competitors(audit_id);
-
--- Migration: ensure v3 columns exist on competitors
 ALTER TABLE public.competitors ADD COLUMN IF NOT EXISTS total_reviews INTEGER DEFAULT 0;
 ALTER TABLE public.competitors ADD COLUMN IF NOT EXISTS google_maps_url TEXT;
--- Rename review_count to total_reviews if needed (run manually if upgrading):
--- ALTER TABLE public.competitors RENAME COLUMN review_count TO total_reviews;
+
+CREATE INDEX IF NOT EXISTS idx_competitors_audit_id ON public.competitors(audit_id);
 
 -- =============================================
--- WHATSAPP MESSAGES TABLE (v2)
+-- 6. WHATSAPP MESSAGES
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     audit_id UUID REFERENCES public.audits(id) ON DELETE CASCADE,
     phone_number TEXT NOT NULL,
     message_type TEXT DEFAULT 'diagnostic_report',
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'sent', 'delivered', 'read', 'failed')),
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending','sent','delivered','read','failed')),
     retry_count INTEGER DEFAULT 0,
     evolution_message_id TEXT,
     error_message TEXT,
@@ -231,22 +210,21 @@ CREATE TABLE IF NOT EXISTS public.whatsapp_messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE public.whatsapp_messages ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;
+
 CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_audit_id ON public.whatsapp_messages(audit_id);
 CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_status ON public.whatsapp_messages(status);
 
--- Migration: ensure v3 columns exist on whatsapp_messages
-ALTER TABLE public.whatsapp_messages ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;
-
 -- =============================================
--- PAYMENTS TABLE (Future use)
+-- 7. PAYMENTS (future use)
 -- =============================================
 CREATE TABLE IF NOT EXISTS public.payments (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-    user_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    user_id UUID,
     audit_id UUID REFERENCES public.audits(id) ON DELETE SET NULL,
     amount_cents INTEGER NOT NULL,
     currency TEXT DEFAULT 'BRL',
-    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'paid', 'failed', 'refunded')),
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending','paid','failed','refunded')),
     payment_method TEXT,
     transaction_id TEXT,
     metadata JSONB,
@@ -259,9 +237,8 @@ CREATE INDEX IF NOT EXISTS idx_payments_status ON public.payments(status);
 CREATE INDEX IF NOT EXISTS idx_payments_created_at ON public.payments(created_at DESC);
 
 -- =============================================
--- TRIGGERS
+-- 8. TRIGGERS
 -- =============================================
-
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -291,9 +268,8 @@ CREATE TRIGGER update_payments_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- =============================================
--- VIEWS
+-- 9. VIEW
 -- =============================================
-
 CREATE OR REPLACE VIEW public.recent_audits AS
 SELECT
     a.id,
@@ -313,15 +289,3 @@ SELECT
 FROM public.audits a
 JOIN public.businesses b ON a.business_id = b.id
 ORDER BY a.created_at DESC;
-
--- =============================================
--- COMPLETED — Verify
--- =============================================
-SELECT
-    'Profiles' as table_name, COUNT(*) as count FROM public.profiles
-UNION ALL SELECT 'Businesses', COUNT(*) FROM public.businesses
-UNION ALL SELECT 'Audits', COUNT(*) FROM public.audits
-UNION ALL SELECT 'Reviews', COUNT(*) FROM public.reviews
-UNION ALL SELECT 'Competitors', COUNT(*) FROM public.competitors
-UNION ALL SELECT 'WhatsApp Messages', COUNT(*) FROM public.whatsapp_messages
-UNION ALL SELECT 'Payments', COUNT(*) FROM public.payments;
