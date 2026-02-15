@@ -7,7 +7,7 @@ services:
     name: evolution-api
     runtime: docker
     dockerfilePath: ./evolution/Dockerfile
-    plan: starter  # Free tier or upgrade as needed
+    plan: free  # Free tier or upgrade as needed
     region: oregon  # Choose your preferred region
     healthCheckPath: /
     envVars:
