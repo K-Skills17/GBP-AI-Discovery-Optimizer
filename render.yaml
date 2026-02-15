@@ -76,7 +76,7 @@ services:
 databases:
   # PostgreSQL database for Evolution API
   - name: evolution-db
-    plan: starter  # Free tier - 256MB RAM, 1GB storage
+    plan: free  # Free tier (replaces legacy 'starter' plan)
     databaseName: evolution_db
     user: evolution_user
     region: oregon  # Should match the service region
@@ -85,6 +85,6 @@ databases:
 # Uncomment if you want to add Redis
 # - type: redis
 #   name: evolution-redis
-#   plan: starter  # Free tier
+#   plan: free  # Free tier
 #   maxmemoryPolicy: allkeys-lru
 #   ipAllowList: []  # Allow all IPs or restrict as needed
