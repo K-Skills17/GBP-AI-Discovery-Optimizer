@@ -100,10 +100,10 @@ def _completed_audit(audit_id="audit-001", **overrides):
         "recommendations": [],
         "processing_time_seconds": 12,
         "error_message": None,
-        "delivery_mode": "standalone",
         "whatsapp_number": None,
         "whatsapp_sent": None,
         "whatsapp_sent_at": None,
+        "whatsapp_error": None,
         "created_at": now,
         "updated_at": now,
     }
@@ -129,10 +129,10 @@ def _pending_audit(audit_id="audit-002"):
         "recommendations": None,
         "processing_time_seconds": None,
         "error_message": None,
-        "delivery_mode": "standalone",
         "whatsapp_number": None,
         "whatsapp_sent": None,
         "whatsapp_sent_at": None,
+        "whatsapp_error": None,
         "created_at": now,
         "updated_at": now,
     }
@@ -190,7 +190,7 @@ class TestCreateAudit:
         mock_audit_service.create_audit.assert_awaited_once()
 
     def test_create_audit_with_whatsapp(self, client, mock_audit_service):
-        audit = _completed_audit(delivery_mode="whatsapp", whatsapp_number="11999990000")
+        audit = _completed_audit(whatsapp_number="11999990000")
         mock_audit_service.create_audit = AsyncMock(return_value=audit)
 
         resp = client.post(
@@ -199,12 +199,11 @@ class TestCreateAudit:
                 "business_name": "Clinica Sorriso",
                 "location": "Sao Paulo",
                 "whatsapp": "11999990000",
-                "delivery_mode": "whatsapp",
             },
         )
         assert resp.status_code == 201
         data = resp.json()
-        assert data["delivery_mode"] == "whatsapp"
+        assert data["whatsapp_number"] == "11999990000"
 
     def test_create_audit_business_not_found(self, client, mock_audit_service):
         mock_audit_service.create_audit = AsyncMock(
@@ -240,14 +239,14 @@ class TestCreateAudit:
         )
         assert resp.status_code == 422
 
-    def test_create_audit_invalid_delivery_mode(self, client, mock_audit_service):
-        """delivery_mode must be 'standalone' or 'whatsapp'."""
+    def test_create_audit_invalid_whatsapp(self, client, mock_audit_service):
+        """whatsapp number too short -> 422."""
         resp = client.post(
             "/api/v1/audits",
             json={
                 "business_name": "Clinica",
                 "location": "SP",
-                "delivery_mode": "email",
+                "whatsapp": "123",
             },
         )
         assert resp.status_code == 422

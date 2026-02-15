@@ -6,7 +6,7 @@ from datetime import datetime
 class AuditCreateRequest(BaseModel):
     business_name: str = Field(..., min_length=2, max_length=200)
     location: str = Field(..., min_length=2, max_length=100)
-    whatsapp: str = Field(..., min_length=10, max_length=20)
+    whatsapp: Optional[str] = Field(None, min_length=10, max_length=20)
     utm_source: Optional[str] = Field(None, max_length=100)
     utm_medium: Optional[str] = Field(None, max_length=100)
     utm_campaign: Optional[str] = Field(None, max_length=200)
@@ -14,7 +14,9 @@ class AuditCreateRequest(BaseModel):
 
     @field_validator("whatsapp")
     @classmethod
-    def validate_whatsapp(cls, v: str) -> str:
+    def validate_whatsapp(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
         digits = "".join(c for c in v if c.isdigit())
         if len(digits) < 10 or len(digits) > 13:
             raise ValueError(

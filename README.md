@@ -10,6 +10,7 @@ Uma ferramenta SaaS para o mercado brasileiro que audita como a IA do Google per
 - **Queries Conversacionais**: 20 perguntas que deveriam encontrar o negócio
 - **Auditoria Visual**: Cobertura de fotos e provas visuais
 - **Recomendações Priorizadas**: Ações específicas para melhorar o score
+- **🆕 Entrega via WhatsApp**: Resultados enviados diretamente no WhatsApp do cliente
 
 ## 🏗️ Arquitetura
 
@@ -19,6 +20,7 @@ Uma ferramenta SaaS para o mercado brasileiro que audita como a IA do Google per
 - **Queue**: Celery + Redis
 - **AI**: Google Gemini 1.5 Flash
 - **Scraping**: Outscraper API
+- **WhatsApp**: Evolution API (opcional)
 
 ### Frontend (Next.js)
 - **Framework**: Next.js 14 (App Router)
@@ -34,7 +36,9 @@ Uma ferramenta SaaS para o mercado brasileiro que audita como a IA do Google per
 - Conta Supabase
 - API Keys:
   - Google Gemini API
-  - Outscraper API
+  - Google Places API
+- Opcional (para WhatsApp):
+  - Evolution API (veja [EVOLUTION_API_SETUP.md](./EVOLUTION_API_SETUP.md))
 
 ## 🚀 Setup Rápido
 
@@ -60,10 +64,11 @@ Uma ferramenta SaaS para o mercado brasileiro que audita como a IA do Google per
 2. Crie uma API key
 3. Anote a `GEMINI_API_KEY`
 
-**Outscraper:**
-1. Crie conta em [outscraper.com](https://outscraper.com)
-2. Adquira créditos (plano básico funciona)
-3. Anote a `OUTSCRAPER_API_KEY`
+**Google Places:**
+1. Acesse [Google Cloud Console](https://console.cloud.google.com)
+2. Ative a API do Google Places
+3. Crie uma API key
+4. Anote a `GOOGLE_PLACES_API_KEY`
 
 ### 3. Backend Setup
 
@@ -177,8 +182,14 @@ SUPABASE_SERVICE_KEY=eyJxxx...
 REDIS_URL=redis://localhost:6379/0
 
 # APIs
-OUTSCRAPER_API_KEY=xxx
+GOOGLE_PLACES_API_KEY=xxx
 GEMINI_API_KEY=xxx
+
+# WhatsApp (Opcional)
+EVOLUTION_API_URL=http://localhost:8080
+EVOLUTION_API_KEY=xxx
+EVOLUTION_INSTANCE_NAME=default
+OWNER_WHATSAPP=5511999991234
 
 # Config
 MAX_REVIEWS_PER_AUDIT=100
@@ -232,15 +243,29 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJxxx...
 - Backend deve estar rodando em `http://localhost:8000`
 - Check CORS settings em `backend/app/main.py`
 
+## 📱 Integração WhatsApp (Opcional)
+
+Para enviar resultados via WhatsApp, você precisa configurar a Evolution API:
+
+1. **Leia o guia completo:** [EVOLUTION_API_SETUP.md](./EVOLUTION_API_SETUP.md)
+2. **Deploy rápido no Render:** Use o `render.yaml` incluído
+3. **Conecte via QR Code:** Igual ao WhatsApp Web
+4. **Configure as variáveis de ambiente** no seu backend
+
+**Benefícios:**
+- ✅ Maior engajamento (mensagens diretas no WhatsApp)
+- ✅ Notificações automáticas quando audit fica pronto
+- ✅ Lead capture mais efetivo
+- ✅ Proprietário recebe notificação de novos leads
+
 ## 📝 TODO / Roadmap
 
+- [x] Integração com WhatsApp para notificar quando pronto
+- [x] Geração de PDF report (download disponível)
 - [ ] Autenticação de usuários (Supabase Auth)
 - [ ] Painel admin para ver todas audits
-- [ ] Geração de PDF report
-- [ ] Integração com WhatsApp para notificar quando pronto
 - [ ] Sistema de pagamento (Stripe/Hotmart)
 - [ ] Cache de audits recentes (< 24h)
-- [ ] Rate limiting
 - [ ] Testes automatizados
 
 ## 🤝 Contribuindo

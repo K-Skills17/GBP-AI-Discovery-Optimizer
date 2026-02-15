@@ -56,8 +56,12 @@ app = FastAPI(
 )
 
 # ------------------------------------------------------------------
-# Middleware (order matters — outermost first)
+# Middleware — last add_middleware() call = outermost in Starlette.
+# CORS must be outermost so preflight OPTIONS requests get handled
+# before auth or rate-limiting can reject them.
 # ------------------------------------------------------------------
+app.add_middleware(SupabaseAuthMiddleware)
+app.add_middleware(RateLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
@@ -65,8 +69,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(RateLimitMiddleware)
-app.add_middleware(SupabaseAuthMiddleware)
 
 # ------------------------------------------------------------------
 # Routers
