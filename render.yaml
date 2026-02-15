@@ -1,0 +1,90 @@
+# Render Blueprint for Evolution API (WhatsApp Integration)
+# This file deploys the Evolution API so your app can send WhatsApp messages
+
+services:
+  # Evolution API - WhatsApp Business Integration
+  - type: web
+    name: evolution-api
+    runtime: docker
+    dockerfilePath: ./evolution/Dockerfile
+    plan: starter  # Free tier or upgrade as needed
+    region: oregon  # Choose your preferred region
+    healthCheckPath: /
+    envVars:
+      # Server Configuration
+      - key: SERVER_URL
+        sync: false  # Set manually: https://your-evolution-api.onrender.com
+      - key: PORT
+        value: "8080"
+
+      # Database - Uses Render PostgreSQL
+      - key: DATABASE_ENABLED
+        value: "true"
+      - key: DATABASE_PROVIDER
+        value: "postgresql"
+      - key: DATABASE_CONNECTION_URI
+        fromDatabase:
+          name: evolution-db
+          property: connectionString
+      - key: DATABASE_CONNECTION_CLIENT_NAME
+        value: "evolution_api"
+
+      # Redis - For caching and queues (optional but recommended)
+      - key: REDIS_ENABLED
+        value: "true"
+      - key: REDIS_URI
+        sync: false  # Add your Redis URL (can use Render Redis or external)
+      - key: REDIS_PREFIX_KEY
+        value: "evolution"
+
+      # Authentication - IMPORTANT: Set a strong API key
+      - key: AUTHENTICATION_TYPE
+        value: "apikey"
+      - key: AUTHENTICATION_API_KEY
+        sync: false  # Generate a strong random key
+      - key: AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES
+        value: "true"
+
+      # QR Code Configuration
+      - key: QRCODE_LIMIT
+        value: "30"  # Max attempts to read QR code
+      - key: QRCODE_COLOR
+        value: "#198754"
+
+      # Webhook Configuration (optional)
+      - key: WEBHOOK_GLOBAL_URL
+        value: ""
+      - key: WEBHOOK_GLOBAL_ENABLED
+        value: "false"
+      - key: WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS
+        value: "false"
+
+      # Log Configuration
+      - key: LOG_LEVEL
+        value: "ERROR,WARN,DEBUG,INFO,LOG,VERBOSE,DARK,WEBHOOKS"
+      - key: LOG_COLOR
+        value: "true"
+      - key: LOG_BAILEYS
+        value: "error"
+
+      # Instance Configuration
+      - key: CONFIG_SESSION_PHONE_CLIENT
+        value: "Evolution API"
+      - key: CONFIG_SESSION_PHONE_NAME
+        value: "Edge"
+
+databases:
+  # PostgreSQL database for Evolution API
+  - name: evolution-db
+    plan: starter  # Free tier - 256MB RAM, 1GB storage
+    databaseName: evolution_db
+    user: evolution_user
+    region: oregon  # Should match the service region
+
+# Optional: Redis for better performance
+# Uncomment if you want to add Redis
+# - type: redis
+#   name: evolution-redis
+#   plan: starter  # Free tier
+#   maxmemoryPolicy: allkeys-lru
+#   ipAllowList: []  # Allow all IPs or restrict as needed
