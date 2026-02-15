@@ -26,9 +26,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
 
     # Evolution API (WhatsApp)
-    EVOLUTION_API_URL: str = "http://localhost:8080"
+    EVOLUTION_API_URL: str = "https://evolution-api-4mbe.onrender.com"
     EVOLUTION_API_KEY: str = ""
-    EVOLUTION_INSTANCE_NAME: str = "default"
+    EVOLUTION_INSTANCE_NAME: str = "GBP-AI-Discovery-Optimizer"
 
     # Owner notification
     OWNER_WHATSAPP: str = ""
